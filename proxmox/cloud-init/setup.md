@@ -20,6 +20,7 @@ wget link_to_the_image
 ## Creating the cloud-init yaml file
 
 Make sure that the password in question is hashed and then introduced in the file.
+The file needs to be saved here `/var/lib/vz/snippets/`
 This can by achieved by using the following command:
 
 ```bash

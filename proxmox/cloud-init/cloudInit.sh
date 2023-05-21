@@ -22,6 +22,7 @@ fi
 echo -e "---------------------------"
 echo -e "${UPURPLE}Configuring the VM${NC}"
 echo -e "---------------------------"
+read -p "$(echo -e "Enter the VM ID")" vmID
 read -p "$(echo -e "Enter the name of the VM")" vmName
 read -p "$(echo -e "Please enter the number of cores\n1, 2, 4")" cores
 read -p "$(echo -e "Please enter RAM size \n 2048 | 4096 | 8192")" ram
@@ -36,27 +37,27 @@ $passwordVM = python3 -c "import crypt; print(crypt.crypt('$passwordVM', crypt.m
 read -p "$(echo -e "Enter the SSH Key")" sshKey
 
 
-#!/bin/bash
-
-create_yaml() {
-    # Take user, password and ssh key as arguments
-    user="$1"
+createYaml() {
+    username="$1"
     password="$2"
     ssh_key="$3"
-    
-    # Hash the password
-    hashed_password=$(python3 -c "import crypt; print(crypt.crypt('$password', crypt.mksalt(crypt.METHOD_SHA512)))")
-    
-    # Create the yaml
+    hashedPassword=$(python3 -c "import crypt; print(crypt.crypt('$passwordVM', crypt.mksalt(crypt.METHOD_SHA512)))")
+
     echo "#cloud-config
 users:
-    - name: $user
-    passwd: $hashed_password
+    - name: $username
+    passwd: $hashedPassword
     ssh_pwauth: True
     lock_passwd: False
     ssh_authorized_keys:
-        - $ssh_key" > cloud-config.yaml
+        - $sshKey" > /var/lib/vz/snippets/cloud-config.yaml
+
 }
 
-# Call the function with user, password and ssh key
-create_yaml "username" "mypassword" "ssh-rsa xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx user@host"
+createYaml "$usernameVM" "$passwordVM" "$sshKey"
+
+qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=0 --disk0 size=$diskSize --cores=$cores
+qm set $vmID --scsiw virtio-scsi-pci --scsi0 local-lvm:vm-$vmID-disk-0
+qm set $vmID --cicustom "user=local:snippets/cloud-config.yaml"
+qm set $vmID --boot c --bootdisk scsi0
+qm set $vmID --serial0 socket --vga serial0
