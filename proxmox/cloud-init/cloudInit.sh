@@ -26,7 +26,7 @@ read -p "$(echo -e "${UBLUE}Enter the VM ID:\n${NC}")" vmID
 read -p "$(echo -e "${UBLUE}Enter the name of the VM:\n${NC}")" vmName
 read -p "$(echo -e "${UBLUE}Please enter the number of cores: 1 | 2 | 4 \n${NC}")" cores
 read -p "$(echo -e "${UBLUE}Please enter RAM size: 2048 | 4096 | 8192 \n${NC}")" ram
-read -p "$(echo -e "${UBLUE}Enter disk size (ex. 50G):\n${NC}")" diskSize
+read -p "$(echo -e "${UBLUE}Enter disk size (ex. 50):\n${NC}")" diskSize
 
 echo -e "---------------------------"
 echo -e "${UPURPLE}VM specific configuration${NC}"
@@ -56,8 +56,13 @@ users:
 
 createYaml "$usernameVM" "$hashedPassword" "$sshKey"
 
-qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=0 --cores=$cores --disk0 size=$diskSize
-qm set $vmID --scsihw virtio-scsi-pci --scsi1 local-lvm:vm-$vmID-disk-0,size=$diskSize
+qm importdisk $vmID ./ubuntu-images/$cloudImg
+qm set $vmID --scsi1 local-lvm:vm-$vmID-disk-1
+qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=0 --cores=$cores
+qm set $vmID --scsihw virtio-scsi-pci --scsi0 local-lvm:$diskSize
 qm set $vmID --cicustom "user=local:snippets/cloud-config.yaml"
 qm set $vmID --boot c --bootdisk scsi1
 qm set $vmID --serial0 socket --vga serial0
+
+
+qm create $vmID --memory $ram --name $vmName --net0 virtiom,bridge=0 --cores=$cores
