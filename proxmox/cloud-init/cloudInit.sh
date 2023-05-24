@@ -12,6 +12,8 @@ read -p "$(echo -e "Copy paste the link below\n---\n ")" cloudLink
 cloudImg=$(basename "$cloudLink")
 fullPath="$imgPath/$cloudImg"
 
+# This if else statement will check if there is a cloud img already existing in the folder
+
 if [ -f "$fullPath" ]; then
     echo -e "\n Cloud Image already exists"
 elif [ ! -f "$fullPath" ]; then
@@ -19,6 +21,7 @@ elif [ ! -f "$fullPath" ]; then
     wget -q --show-progress -P $imgPath $cloudLink
 fi
 
+# added some formatting. Colors are present in the colors.sh file.
 echo -e "---------------------------"
 echo -e "${UPURPLE}Configuring the VM${NC}"
 echo -e "---------------------------"
@@ -36,7 +39,7 @@ read -sp "$(echo -e "${UBLUE}Enter password:\n${NC}")" passwordVM
 hashedPassword=$(python3 -c "import crypt; print(crypt.crypt('$passwordVM', crypt.mksalt(crypt.METHOD_SHA512)))")
 
 # VM Creation
-qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=vmbr0 --cores=$cores
+qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=vmbr0 --cores=$cores --agent enabled=1
 
 # Importing the VM image
 qm importdisk $vmID ./ubuntu-images/$cloudImg local-lvm
@@ -45,13 +48,17 @@ qm importdisk $vmID ./ubuntu-images/$cloudImg local-lvm
 qm set $vmID --ide2 local-lvm:cloudinit
 
 # Setup a separate disk for storage and boot order
-qm set $vmID --scsi0 local-lvm:vm-$vmID-disk-0 --boot order=scsi0
+qm set $vmID --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-$vmID-disk-0 --boot order=scsi0
+
+# There are some issues with the resizing and thus I will leave it as a comment here
+qm resize $vmID scsi0 +$diskSize
 
 # Set the SCSI HW to virtio-scsi-pci and adds a new scsi disk
-qm set $vmID --scsihw virtio-scsi-pci --scsi1 local-lvm:$diskSize
+# You can create a separate storage if you want to 
+## qm set $vmID --scsihw virtio-scsi-pci --scsi1 local-lvm:$diskSize
 
 # Set the output to console
 qm set $vmID --serial0 socket --vga serial0
 
 # Cloud-init configuration and set ipv4 dhcp
-qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkey ~/.ssh/id_ecdsa.pub --ipconfig0 ip=dhcp
+qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkeys ~/.ssh/authorized_keys --ipconfig0 ip=dhcp
