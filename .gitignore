@@ -1,6 +1,7 @@
 #############################
 # Personal git ignored files#
 ahk/streamdeck_profile/vars/homelab.ahk
+proxmox/cloud-init/ubuntu-images/*.img
 #############################
 
 # Byte-compiled / optimized / DLL files
