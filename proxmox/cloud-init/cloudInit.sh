@@ -34,35 +34,24 @@ echo -e "---------------------------"
 read -p "$(echo -e "${UBLUE}Enter your username:\n${NC}")" usernameVM
 read -sp "$(echo -e "${UBLUE}Enter password:\n${NC}")" passwordVM
 hashedPassword=$(python3 -c "import crypt; print(crypt.crypt('$passwordVM', crypt.mksalt(crypt.METHOD_SHA512)))")
-read -p "$(echo -e "${UBLUE}Enter the SSH Key:\n${NC}")" sshKey
 
+# VM Creation
+qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=vmbr0 --cores=$cores
 
-createYaml() {
-    username="$1"
-    password="$2"
-    ssh_key="$3"
-    hashed_password=$(python3 -c "import crypt; print(crypt.crypt('$password', crypt.mksalt(crypt.METHOD_SHA512)))")
+# Importing the VM image
+qm importdisk $vmID ./ubuntu-images/$cloudImg local-lvm
 
-    echo "#cloud-config
-users:
-    - name: $username
-    passwd: $hashed_password
-    ssh_pwauth: True
-    lock_passwd: False
-    ssh_authorized_keys:
-        - $sshKey" > /var/lib/vz/snippets/cloud-config.yaml
+# Attach the cloud init configuration
+qm set $vmID --ide2 local-lvm:cloudinit
 
-}
+# Setup a separate disk for storage and boot order
+qm set $vmID --scsi0 local-lvm:vm-$vmID-disk-0 --boot order=scsi0
 
-createYaml "$usernameVM" "$hashedPassword" "$sshKey"
+# Set the SCSI HW to virtio-scsi-pci and adds a new scsi disk
+qm set $vmID --scsihw virtio-scsi-pci --scsi1 local-lvm:$diskSize
 
-qm importdisk $vmID ./ubuntu-images/$cloudImg
-qm set $vmID --scsi1 local-lvm:vm-$vmID-disk-1
-qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=0 --cores=$cores
-qm set $vmID --scsihw virtio-scsi-pci --scsi0 local-lvm:$diskSize
-qm set $vmID --cicustom "user=local:snippets/cloud-config.yaml"
-qm set $vmID --boot c --bootdisk scsi1
+# Set the output to console
 qm set $vmID --serial0 socket --vga serial0
 
-
-qm create $vmID --memory $ram --name $vmName --net0 virtiom,bridge=0 --cores=$cores
+# Cloud-init configuration and set ipv4 dhcp
+qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkey ~/.ssh/id_ecdsa.pub --ipconfig0 ip=dhcp
