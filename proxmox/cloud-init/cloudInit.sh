@@ -1,6 +1,6 @@
 #!/bin/bash
-source ./colors.sh
-source ./vars.sh
+source /root/personal-scripts/proxmox/cloud-init/colors.sh
+source /root/personal-scripts/proxmox/cloud-init/vars.sh
 
 
 echo -e "---------------------------"
@@ -29,7 +29,7 @@ read -p "$(echo -e "${UBLUE}Enter the VM ID:\n${NC}")" vmID
 read -p "$(echo -e "${UBLUE}Enter the name of the VM:\n${NC}")" vmName
 read -p "$(echo -e "${UBLUE}Please enter the number of cores: 1 | 2 | 4 \n${NC}")" cores
 read -p "$(echo -e "${UBLUE}Please enter RAM size: 2048 | 4096 | 8192 \n${NC}")" ram
-read -p "$(echo -e "${UBLUE}Enter disk size (ex. 50):\n${NC}")" diskSize
+read -p "$(echo -e "${UBLUE}Enter disk size (ex. 50G):\n${NC}")" diskSize
 
 echo -e "---------------------------"
 echo -e "${UPURPLE}VM specific configuration${NC}"
@@ -42,7 +42,7 @@ hashedPassword=$(python3 -c "import crypt; print(crypt.crypt('$passwordVM', cryp
 qm create $vmID --memory $ram --name $vmName --net0 virtio,bridge=vmbr0 --cores=$cores --agent enabled=1
 
 # Importing the VM image
-qm importdisk $vmID ./ubuntu-images/$cloudImg local-lvm
+qm importdisk $vmID /root/personal-scripts/proxmox/cloud-init/ubuntu-images/$cloudImg local-lvm
 
 # Attach the cloud init configuration
 qm set $vmID --ide2 local-lvm:cloudinit
@@ -61,4 +61,5 @@ qm resize $vmID scsi0 +$diskSize
 qm set $vmID --serial0 socket --vga serial0
 
 # Cloud-init configuration and set ipv4 dhcp
-qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkeys ~/.ssh/authorized_keys --ipconfig0 ip=dhcp
+qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkeys "
+$sshKeys" --ipconfig0 ip=dhcp
