@@ -61,5 +61,4 @@ qm resize $vmID scsi0 +$diskSize
 qm set $vmID --serial0 socket --vga serial0
 
 # Cloud-init configuration and set ipv4 dhcp
-qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkeys "
-$sshKeys" --ipconfig0 ip=dhcp
+qm set $vmID --ciuser "$usernameVM" --cipassword "$hashedPassword" --sshkeys "$sshKeys" --ipconfig0 ip=dhcp
